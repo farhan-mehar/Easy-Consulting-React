@@ -5,7 +5,7 @@ pipeline {
         IMAGE_NAME = 'easy-consulting-react'
         DOCKERHUB_USER = 'muhammadfarhan123'         // ✅ Your DockerHub username
         EC2_USER = 'ubuntu'
-        EC2_HOST = '3.90.113.90'                     // ✅ Your EC2 public IP
+        EC2_HOST = '98.88.83.236'                     // ✅ Your EC2 public IP
         APP_PORT = '3000'
         NODE_CACHE = "${JENKINS_HOME}/npm-cache"     // ✅ Global NPM cache
     }
