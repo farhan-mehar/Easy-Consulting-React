@@ -3,11 +3,11 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'easy-consulting-react'
-        DOCKERHUB_USER = 'muhammadfarhan123'   // Your DockerHub username
+        DOCKERHUB_USER = 'muhammadfarhan123'         // ✅ Your DockerHub username
         EC2_USER = 'ubuntu'
-        EC2_HOST = '3.90.113.90'               // Your EC2 public IP
+        EC2_HOST = '3.90.113.90'                     // ✅ Your EC2 public IP
         APP_PORT = '3000'
-        NODE_CACHE = "${JENKINS_HOME}/npm-cache"   // global NPM cache
+        NODE_CACHE = "${JENKINS_HOME}/npm-cache"     // ✅ Global NPM cache
     }
 
     triggers {
@@ -23,14 +23,11 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                // Create cache dir if missing
-                sh 'mkdir -p $NODE_CACHE'
-
-                // Point npm to cache (user-level, no sudo needed)
-                sh 'npm config set cache $NODE_CACHE'
-
-                // Install deps (skip peer dep errors)
-                sh 'npm install --legacy-peer-deps'
+                sh '''
+                    mkdir -p $NODE_CACHE
+                    npm config set cache $NODE_CACHE
+                    npm install --legacy-peer-deps
+                '''
             }
         }
 
@@ -42,27 +39,35 @@ pipeline {
 
         stage('Verify Dockerfile') {
             steps {
-                sh 'ls -l && cat Dockerfile || echo "Dockerfile not found!"'
+                sh '''
+                    if [ -f Dockerfile ]; then
+                        echo "✅ Dockerfile found:"
+                        cat Dockerfile
+                    else
+                        echo "❌ Dockerfile not found!"
+                        exit 1
+                    fi
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                dir("$WORKSPACE") {
-                    sh """
-                        docker build \
-                          --cache-from=$DOCKERHUB_USER/$IMAGE_NAME:latest \
-                          -t $DOCKERHUB_USER/$IMAGE_NAME:latest .
-                    """
-                }
+                sh '''
+                    docker build \
+                      --cache-from=$DOCKERHUB_USER/$IMAGE_NAME:latest \
+                      -t $DOCKERHUB_USER/$IMAGE_NAME:latest .
+                '''
             }
         }
 
         stage('Push to DockerHub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh 'echo $PASS | docker login -u $USER --password-stdin'
-                    sh 'docker push $USER/$IMAGE_NAME:latest'
+                    sh '''
+                        echo $PASS | docker login -u $USER --password-stdin
+                        docker push $USER/$IMAGE_NAME:latest
+                    '''
                 }
             }
         }
@@ -70,14 +75,14 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 sshagent(['ec2-ssh-key']) {
-                    sh """
+                    sh '''
                         ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST '
                             docker pull $DOCKERHUB_USER/$IMAGE_NAME:latest &&
                             docker stop $IMAGE_NAME || true &&
                             docker rm $IMAGE_NAME || true &&
                             docker run -d -p $APP_PORT:$APP_PORT --name $IMAGE_NAME $DOCKERHUB_USER/$IMAGE_NAME:latest
                         '
-                    """
+                    '''
                 }
             }
         }
@@ -85,7 +90,6 @@ pipeline {
 
     post {
         always {
-            // ✅ Clean workspace but keep NPM cache
             cleanWs(
                 deleteDirs: true,
                 notFailBuild: true,
