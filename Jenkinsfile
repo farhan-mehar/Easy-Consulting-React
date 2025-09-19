@@ -7,6 +7,7 @@ pipeline {
         EC2_USER = 'ubuntu'
         EC2_HOST = '3.90.113.90'               // Your EC2 public IP
         APP_PORT = '3000'
+        NODE_CACHE = "${JENKINS_HOME}/npm-cache"   // global NPM cache
     }
 
     triggers {
@@ -20,6 +21,25 @@ pipeline {
             }
         }
 
+        stage('Install Dependencies') {
+            steps {
+                // Create cache dir if missing
+                sh 'mkdir -p $NODE_CACHE'
+
+                // Point npm to cache
+                sh 'npm config set cache $NODE_CACHE --global'
+
+                // Install deps
+                sh 'npm install'
+            }
+        }
+
+        stage('Build React App') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
         stage('Verify Dockerfile') {
             steps {
                 sh 'ls -l && cat Dockerfile || echo "Dockerfile not found!"'
@@ -27,13 +47,16 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-    steps {
-        dir("$WORKSPACE") {
-            sh "docker build -t $DOCKERHUB_USER/$IMAGE_NAME:latest ."
+            steps {
+                dir("$WORKSPACE") {
+                    sh """
+                        docker build \
+                          --cache-from=$DOCKERHUB_USER/$IMAGE_NAME:latest \
+                          -t $DOCKERHUB_USER/$IMAGE_NAME:latest .
+                    """
+                }
+            }
         }
-    }
-}
-
 
         stage('Push to DockerHub') {
             steps {
@@ -59,23 +82,16 @@ pipeline {
             }
         }
     }
-pipeline {
-    agent any
-    stages {
-        stage('Cleanup') {
-            steps {
-                cleanWs()  // requires "Workspace Cleanup" plugin
-            }
-        }
-        stage('Build') {
-            steps {
-                sh 'npm install && npm run build'
-            }
-        }
-    }
-}
 
     post {
+        always {
+            // ✅ Clean workspace but keep NPM cache
+            cleanWs(
+                deleteDirs: true,
+                notFailBuild: true,
+                patterns: [[pattern: 'npm-cache', type: 'EXCLUDE']]
+            )
+        }
         success {
             echo '✅ Deployment successful! Your app is running with the latest image.'
         }
