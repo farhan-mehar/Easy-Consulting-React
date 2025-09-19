@@ -14,12 +14,12 @@ pipeline {
         githubPush()
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/farhan-mehar/Easy-Consulting-React.git'
-            }
-        }
+    stage('Checkout') {
+    steps {
+        git branch: 'main', url: 'https://github.com/farhan-mehar/Easy-Consulting-React.git'
+    }
+}
+
 
         stage('Install Dependencies') {
             steps {
