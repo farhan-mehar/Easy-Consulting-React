@@ -1,13 +1,17 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:18-alpine' // ✅ Ensures Node.js and npm are available
+        }
+    }
 
     environment {
         IMAGE_NAME = 'easy-consulting-react'
-        DOCKERHUB_USER = 'muhammadfarhan123'         // ✅ Your DockerHub username
+        DOCKERHUB_USER = 'muhammadfarhan123'
         EC2_USER = 'ubuntu'
-        EC2_HOST = '98.88.83.236'                     // ✅ Your EC2 public IP
+        EC2_HOST = '98.88.83.236'
         APP_PORT = '3000'
-        NODE_CACHE = "${JENKINS_HOME}/npm-cache"     // ✅ Global NPM cache
+        NODE_CACHE = "${JENKINS_HOME}/npm-cache"
     }
 
     triggers {
@@ -24,6 +28,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
+                    echo "📦 Installing dependencies..."
                     mkdir -p $NODE_CACHE
                     npm config set cache $NODE_CACHE
                     npm install --legacy-peer-deps
@@ -33,13 +38,17 @@ pipeline {
 
         stage('Build React App') {
             steps {
-                sh 'npm run build'
+                sh '''
+                    echo "🔧 Building React app..."
+                    npm run build
+                '''
             }
         }
 
         stage('Verify Dockerfile') {
             steps {
                 sh '''
+                    echo "🔍 Checking for Dockerfile..."
                     if [ -f Dockerfile ]; then
                         echo "✅ Dockerfile found:"
                         cat Dockerfile
@@ -54,6 +63,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
+                    echo "🐳 Building Docker image..."
                     docker build \
                       --cache-from=$DOCKERHUB_USER/$IMAGE_NAME:latest \
                       -t $DOCKERHUB_USER/$IMAGE_NAME:latest .
@@ -65,6 +75,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh '''
+                        echo "🚀 Pushing image to DockerHub..."
                         echo $PASS | docker login -u $USER --password-stdin
                         docker push $USER/$IMAGE_NAME:latest
                     '''
@@ -76,6 +87,7 @@ pipeline {
             steps {
                 sshagent(['ec2-ssh-key']) {
                     sh '''
+                        echo "📦 Deploying to EC2..."
                         ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST '
                             docker pull $DOCKERHUB_USER/$IMAGE_NAME:latest &&
                             docker stop $IMAGE_NAME || true &&
