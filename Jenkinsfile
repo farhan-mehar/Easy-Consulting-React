@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs "NodeJS_18"   // 👈 Use the NodeJS installation you defined in Jenkins
-    }
-
     environment {
         IMAGE_NAME = 'easy-consulting-react'
         DOCKERHUB_USER = 'muhammadfarhan123'   // Your DockerHub username
