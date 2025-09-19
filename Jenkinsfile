@@ -59,6 +59,21 @@ pipeline {
             }
         }
     }
+pipeline {
+    agent any
+    stages {
+        stage('Cleanup') {
+            steps {
+                cleanWs()  // requires "Workspace Cleanup" plugin
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'npm install && npm run build'
+            }
+        }
+    }
+}
 
     post {
         success {
