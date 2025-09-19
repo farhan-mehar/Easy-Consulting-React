@@ -15,7 +15,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/Ujjalzaman/Easy-Consulting-react.git'
+                git 'https://github.com/farhan-mehar/Easy-Consulting-React.git'
             }
         }
 
@@ -24,6 +24,8 @@ pipeline {
                 sh 'docker build -t $IMAGE_NAME .'
             }
         }
+
+        // Optional: Push to DockerHub here
 
         stage('Deploy to EC2') {
             steps {
