@@ -22,17 +22,17 @@ pipeline {
         }
 
         stage('Install Dependencies') {
-            steps {
-                // Create cache dir if missing
-                sh 'mkdir -p $NODE_CACHE'
+    steps {
+        // Create cache dir if missing
+        sh 'mkdir -p $NODE_CACHE'
 
-                // Point npm to cache
-                sh 'npm config set cache $NODE_CACHE --global'
+        // Point npm to cache (user-level, no sudo needed)
+        sh 'npm config set cache $NODE_CACHE'
 
-                // Install deps
-                sh 'npm install'
-            }
-        }
+        // Install deps
+        sh 'npm install'
+    }
+}
 
         stage('Build React App') {
             steps {
